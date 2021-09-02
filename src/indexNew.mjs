@@ -1,4 +1,5 @@
 import axios from 'axios'
+import moment from 'moment'
 import  Crawler from './util/crawler.js'
 const reportWxUrl = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=b206b0d0-198f-46e9-9ff5-d767ccd59fa3'
 const reportedIds = []
@@ -37,26 +38,33 @@ export const fetchUserWeiBoIds = async(containerid) => {
     log('抓取结束')
 }
 
-const generate = (description, url, picurl) => {
-    return {
+const generate = (item) => {
+    const {mblog: {text, original_pic, created_at}, scheme} = item
+    const time = created_at && moment(created_at).format('YYYY-MM-DD hh:mm:ss')
+    return original_pic ? {
         "msgtype": "news",
         "news": {
-            "articles" : [
+            "articles": [
                 {
-                    "title" : "通知",
-                    description,
-                    url,
-                    picurl
+                    "title": time,
+                    description: text,
+                    url: scheme,
+                    picurl: original_pic
                 }
             ]
+        }
+    } : {
+        "msgtype": "markdown",
+        "markdown": {
+            "content": `${text}\n >发布时间: ${time}\n >[原文链接](${scheme})`
         }
     }
 }
 
 const reportMsg = item => {
-    const {mblog: {text, original_pic}, scheme} = item
-
-    const news = generate(text,scheme,original_pic)
+    const news = generate(item)
 
     axios.post(reportWxUrl, news)
 }
+
+
